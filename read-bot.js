@@ -10,6 +10,8 @@ const {
     Routes,
     SlashCommandBuilder,
 } = require('discord.js');
+const { getData, formatMessage } = require('./utils.js');
+const { sendXMTPMessage } = require('./xmtp.js');
 
 const sendCommand = new SlashCommandBuilder()
     .setName('send')
@@ -54,20 +56,28 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     if (interaction.commandName === 'send') {
-        const senderID = interaction.user.id;
-        const recipientAddress = interaction.options.getString("wallet");
+        const senderDiscordID = interaction.user.id;
+        const recipientWalletAddress = interaction.options.getString("wallet");
         const message = interaction.options.getString("message");
-        // if (!recipientAddress || !message) {
-        //     await interaction.reply('Please provide an address and message.');
-        //     return;
-        // }
 
         await interaction.reply('Sending message...');
-        // TODO call API
-        console.log(senderID, recipientAddress, message)
+        try {
+            const { senderWalletAddress, recipientDiscordID } = await getData(senderDiscordID, recipientWalletAddress);
+            const formattedMessage = formatMessage(senderWalletAddress, recipientWalletAddress, message);
+            // Send on XMTP
+            await sendXMTPMessage(recipientWalletAddress, formattedMessage);
+            // Send on Discord
+            console.log(recipientDiscordID)
+            client.users.fetch(recipientDiscordID, false)
+                .then((user) => user.send(formattedMessage))
+                .catch((err) => console.log(err));
+        } catch (error) {
+            console.log(error)
+            client.users.fetch(senderDiscordID, false)
+                .then((user) => user.send(error.response.data.message))
+                .catch((err) => console.log(err));
+        }
     }
 });
-
-
 
 client.login(process.env.DISCORD_TOKEN);
