@@ -67,12 +67,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
             // Send on XMTP
             await sendXMTPMessage(recipientWalletAddress, formattedMessage);
             // Send on Discord
-            console.log(recipientDiscordID)
             client.users.fetch(recipientDiscordID, false)
                 .then((user) => user.send(formattedMessage))
                 .catch((err) => console.log(err));
         } catch (error) {
-            console.log(error)
             client.users.fetch(senderDiscordID, false)
                 .then((user) => user.send(error.response.data.message))
                 .catch((err) => console.log(err));
